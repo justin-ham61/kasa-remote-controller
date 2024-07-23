@@ -1,7 +1,8 @@
 #include <WiFi.h>
+#include <set>
 #include "KasaSmartPlug.h"
 #include "config.h"
-#include "init.h"
+#include "./structs/device.h"
 
 int PORT_NUMBER = 18;
 int port_state = 0;
@@ -18,14 +19,23 @@ const unsigned long debounceDelay = 1000;
 
 KASAUtil kasaUtil;
 
+void addFromConfig(UserDevice userdevices[]){
+    for(int i = 0; i < 4; i++){
+        kasaUtil.CreateDevice(userdevices[i].name, userdevices[i].ip, userdevices[i].type);
+    }
+} 
+
 void connectToWifi(){
-  int found;
   WiFi.begin(SSID, PASSWORD);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.println(".");
   }
   Serial.println("Connected to the WiFi network");
+}
+
+void discoverDevices(){
+  int found;
   found = kasaUtil.ScanDevices();
   Serial.printf("\r\n Found device = %d", found);
 
@@ -36,6 +46,7 @@ void connectToWifi(){
     Serial.printf("\r\n %d. %s IP: %s Relay: %d", i, p->alias, p->ip_address, p->state);  
   } 
 }
+
 
 void IRAM_ATTR onButtonPress(){
   unsigned long currentTime = millis();
@@ -49,7 +60,7 @@ void IRAM_ATTR onButtonPress(){
 }
 
 void handleButtonPress(){
-  kasaUtil.CreateAndDeliver(dev_ip, bulb_state, "bulb");
+  kasaUtil.ToggleAll(bulb_state);
   if(bulb_state == 0){
     bulb_state = 1;
   } else {
@@ -58,18 +69,20 @@ void handleButtonPress(){
 }
 
 void setup() {
-  // put your setup code here, to run once:
+  //Initialize serial
   Serial.begin(9600);
-  
+
+  //Connect to wifi with ssid and password from config.h
+  connectToWifi();
+
+  //IO set  up
   pinMode(PORT_NUMBER, INPUT_PULLUP);
   attachInterrupt(PORT_NUMBER, onButtonPress, FALLING);
 
-  connectToWifi();
-
-  int length = sizeof(ips)/sizeof(ips[0]);
-  for(int i = 0; i < length; i++){
-    Serial.println(ips[i]);
-  }
+  
+  //Initiate devices from pre defined IP addresses and aliases
+  addFromConfig(devices);
+  
 }
 
 void loop() {
