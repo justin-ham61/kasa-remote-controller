@@ -222,9 +222,23 @@ void main_menu_display_loop(){
   display.clearDisplay();
 
   //Draws the background GUI 
-  display.drawBitmap(4, 2,  bitmap_icon, 16, 16, 1);
-  display.drawBitmap(4, 24,  bitmap_icon, 16, 16, 1);
-  display.drawBitmap(4, 46,  bitmap_icon, 16, 16, 1);
+
+  if(kasaUtil.GetSmartPlugByIndex(previousItem)->state == 1){
+      display.drawBitmap(4, 2, bitmap_lit_icon, 16, 16, 1);
+  } else {
+      display.drawBitmap(4, 2, bitmap_icon, 16, 16, 1);
+  }
+  if(kasaUtil.GetSmartPlugByIndex(selectedItem)->state == 1){
+      display.drawBitmap(4, 24, bitmap_lit_icon, 16, 16, 1);
+  } else {
+      display.drawBitmap(4, 24, bitmap_icon, 16, 16, 1);
+  }
+  if(kasaUtil.GetSmartPlugByIndex(nextItem)->state == 1){
+      display.drawBitmap(4, 46, bitmap_lit_icon, 16, 16, 1);
+  } else {
+      display.drawBitmap(4, 46, bitmap_icon, 16, 16, 1);
+  }
+
   display.drawBitmap(0, 22, bitmap_item_sel_background, 128, 21, 1);
   display.drawBitmap(120, 0, bitmap_scrollbar_background, 8, 64, 1);
 

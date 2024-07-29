@@ -9,9 +9,9 @@ const char* SSID = "Odyssey";
 const char* PASSWORD = "Blue4524.";
 
 UserDevice devices[] = {
-   {"Lauter", "10.0.0.131", "bulb"},
+   {"Lauters", "10.0.0.131", "bulb"},
    {"Desja", "10.0.0.95", "bulb"},
-   {"Ball", "10.0.0.211", "bulb"}
+   {"Fado", "10.0.0.211", "bulb"}
 };
 
 const char* ips[] = {
