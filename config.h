@@ -21,6 +21,9 @@ const char* ips[] = {
     "192.168.1.49",
 };
 
+//Time between inactivity and sleep
+const int inactivity_time = 15000;
+
 const int min_brightness = 0;
 const int max_brightness = 100;
 
