@@ -32,7 +32,7 @@ Adafruit_SSD1306 display(128,64, &Wire, -1);
 
 //Pin for waking up from deep sleep
 #define SLEEP_WAKE_PIN          GPIO_NUM_34
-#define SLEEP_WAKE_BITMASK      0xC00000000
+#define SLEEP_WAKE_BITMASK      0xE005000
 
 #define PIN_1 25
 #define PIN_2 26
@@ -87,45 +87,57 @@ volatile bool button3Pressed = false;
 volatile bool button4Pressed = false;
 volatile bool button5Pressed = false;
 
+volatile bool buttonPressed[] = {false, false, false, false, false};
 
 KASAUtil kasaUtil;
 
 void IRAM_ATTR handleButton1() {
+  if(asleep){
+    return;
+  }
   unsigned long currentMillis = millis();
   if (currentMillis - lastDebounceTime > debounceDelay) {
-    button1Pressed = true;
+    buttonPressed[0] = true;
     lastDebounceTime = currentMillis;
   }
 }
-
 void IRAM_ATTR handleButton2() {
+  if(asleep){
+    return;
+  }
   unsigned long currentMillis = millis();
   if (currentMillis - lastDebounceTime > debounceDelay) {
-    button2Pressed = true;
+    buttonPressed[1] = true;
     lastDebounceTime = currentMillis;
   }
 }
-
 void IRAM_ATTR handleButton3() {
+  if(asleep){
+    return;
+  }
   unsigned long currentMillis = millis();
   if (currentMillis - lastDebounceTime > debounceDelay) {
-    button3Pressed = true;
+    buttonPressed[2] = true;
     lastDebounceTime = currentMillis;
   }
 }
-
 void IRAM_ATTR handleButton4() {
+  if(asleep){
+    return;
+  }
   unsigned long currentMillis = millis();
   if (currentMillis - lastDebounceTime > debounceDelay) {
-    button4Pressed = true;
+    buttonPressed[3] = true;
     lastDebounceTime = currentMillis;
   }
 }
-
 void IRAM_ATTR handleButton5() {
+  if(asleep){
+    return;
+  }
   unsigned long currentMillis = millis();
   if (currentMillis - lastDebounceTime > debounceDelay) {
-    button5Pressed = true;
+    buttonPressed[4] = true;
     lastDebounceTime = currentMillis;
   }
 }
@@ -405,25 +417,25 @@ void quickToggle(int index){
 }
 
 void button_loop(){
-  if (button1Pressed) {
+  if (buttonPressed[0]) {
     quickToggle(0);
-    button1Pressed = false;
+    buttonPressed[0] = false;
   }
-  if (button2Pressed) {
+  if (buttonPressed[1]) {
     quickToggle(1);
-    button2Pressed = false;
+    buttonPressed[1] = false;
   }
-  if (button3Pressed) {
+  if (buttonPressed[2]) {
     quickToggle(2);
-    button3Pressed = false;
+    buttonPressed[2] = false;
   }
-  if (button4Pressed) {
+  if (buttonPressed[3]) {
     Serial.println("Button 4 pressed");
-    button4Pressed = false;
+    buttonPressed[3] = false;
   }
-  if (button5Pressed) {
+  if (buttonPressed[4]) {
     Serial.println("Button 5 pressed");
-    button5Pressed = false;
+    buttonPressed[4] = false;
   }
 }
 
@@ -472,7 +484,7 @@ void setup() {
 
   //Sleep check
   esp_sleep_enable_ext0_wakeup(SLEEP_WAKE_PIN, 0);
-
+  esp_sleep_enable_ext1_wakeup(SLEEP_WAKE_BITMASK, ESP_EXT1_WAKEUP_ANY_HIGH);
 }
 
 void loop() {
