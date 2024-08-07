@@ -8,11 +8,25 @@
 const char* SSID = "Odyssey";
 const char* PASSWORD = "Blue4524.";
 
-UserDevice devices[] = {
-   {"Lauters", "10.0.0.131", "bulb"},
+/* UserDevice devices[] = {
+   {"Lauters", "10.0.0.132", "bulb"},
    {"Desja", "10.0.0.95", "bulb"},
-   {"Fado", "10.0.0.211", "bulb"}
+   {"Fado", "10.0.0.212", "bulb"}
+}; */
+
+UserDevice devices[] = {
+  {"Lauters", "10.0.0.130", "bulb"},
+  {"Desja", "10.0.0.97", "bulb"},
+   {"Fado", "10.0.0.213", "bulb"}
 };
+
+char* aliases[] = {
+  "Lauter",
+  "Dejsa",
+  "Ball"
+};
+
+const int size = 3;
 
 const char* ips[] = {
     "192.168.1.46",

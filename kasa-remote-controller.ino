@@ -72,6 +72,7 @@ const unsigned long debounceDelay = 500;
 int displayType = 0;
 
 //Menu Item selection variables
+int numberOfItems;
 int selectedItem = 0;
 int previousItem;
 int nextItem;
@@ -81,6 +82,10 @@ KASASmartBulb* currentBulb;
 unsigned long lastInteractedWith = 0;
 bool asleep = false;
 
+//Variable for auto updating ip address;
+unsigned long lastUpdated = 0;
+
+//Button states
 volatile bool button1Pressed = false;
 volatile bool button2Pressed = false;
 volatile bool button3Pressed = false;
@@ -159,19 +164,6 @@ void connectToWifi(){
     Serial.println(".");
   }
   Serial.println("Connected to the WiFi network");
-}
-
-void discoverDevices(){
-  int found;
-  found = kasaUtil.ScanDevices();
-  Serial.printf("\r\n Found device = %d", found);
-
-  // Print out devices name and ip address found..
-  for (int i = 0; i < found; i++)
-  {
-    KASADevice *p = kasaUtil.GetSmartPlugByIndex(i);
-    Serial.printf("\r\n %d. %s IP: %s Relay: %d", i, p->alias, p->ip_address, p->state);  
-  } 
 }
 
 void quick_rotary_onButtonClick(){
@@ -263,7 +255,7 @@ void handleBrightnessChange(){
   if(brightnessChanged && (millis() - lastChanged) > 400){
     brightnessChanged = false;
     kasaUtil.SetBrightnessAll(currBrightness);
-    for(int i = 0; i < 3; i++){
+    for(int i = 0; i < numberOfItems; i++){
       KASADevice* dev = kasaUtil.GetSmartPlugByIndex(i);
       KASASmartBulb* bulb = static_cast<KASASmartBulb*>(dev);
       bulb->brightness = currBrightness;
@@ -297,28 +289,34 @@ void IRAM_ATTR readEncoderISRMenu(){
 void main_menu_display_loop(){
   previousItem = selectedItem - 1;
   if(previousItem < 0){
-    previousItem = 3 - 1;
+    previousItem = numberOfItems - 1;
   }
   nextItem = selectedItem + 1;
-  if(nextItem >= 3){
+  if(nextItem >= numberOfItems){
     nextItem = 0;
   }
 
   display.clearDisplay();
-
-  //Draws the background GUI 
-
-  if(kasaUtil.GetSmartPlugByIndex(previousItem)->state == 1){
+  if(kasaUtil.GetSmartPlugByIndex(previousItem)->err_code == 1){
+      display.drawBitmap(4, 2, bitmap_error_icon, 16, 16, 1);
+  } else if (kasaUtil.GetSmartPlugByIndex(previousItem)->state == 1){
       display.drawBitmap(4, 2, bitmap_lit_icon, 16, 16, 1);
   } else {
       display.drawBitmap(4, 2, bitmap_icon, 16, 16, 1);
   }
-  if(kasaUtil.GetSmartPlugByIndex(selectedItem)->state == 1){
+
+
+  if(kasaUtil.GetSmartPlugByIndex(selectedItem)->err_code == 1){
+      display.drawBitmap(4, 24, bitmap_error_icon, 16, 16, 1);
+  } else if (kasaUtil.GetSmartPlugByIndex(selectedItem)->state == 1){
       display.drawBitmap(4, 24, bitmap_lit_icon, 16, 16, 1);
   } else {
       display.drawBitmap(4, 24, bitmap_icon, 16, 16, 1);
   }
-  if(kasaUtil.GetSmartPlugByIndex(nextItem)->state == 1){
+
+  if(kasaUtil.GetSmartPlugByIndex(nextItem)->err_code == 1){
+      display.drawBitmap(4, 46, bitmap_error_icon, 16, 16, 1);
+  } else if (kasaUtil.GetSmartPlugByIndex(nextItem)->state == 1){
       display.drawBitmap(4, 46, bitmap_lit_icon, 16, 16, 1);
   } else {
       display.drawBitmap(4, 46, bitmap_icon, 16, 16, 1);
@@ -346,7 +344,7 @@ void main_menu_display_loop(){
   display.print(kasaUtil.GetSmartPlugByIndex(nextItem)->alias);
 
   //Scroll position box
-  display.fillRect(125, 64/3 * selectedItem, 3, 64/3, WHITE);
+  display.fillRect(125, (64/numberOfItems) * selectedItem, 3, (64/numberOfItems), WHITE);
 
   //Display
   display.display();
@@ -404,8 +402,9 @@ void sleep_loop(){
 }
 
 void quickToggle(int index){
-  Serial.println("ATTEMPTING TO TOGGLE AT INDEX");
   currentBulb = static_cast<KASASmartBulb*>(kasaUtil.GetSmartPlugByIndex(index));
+  Serial.print("Toggling: ");
+  Serial.println(currentBulb->alias);
   individualBrightness = currentBulb->state;
   int currentState = currentBulb->state;
   if(currentState == 0){
@@ -436,6 +435,14 @@ void button_loop(){
   if (buttonPressed[4]) {
     Serial.println("Button 5 pressed");
     buttonPressed[4] = false;
+  }
+}
+
+void update_loop(){
+  unsigned long curr = millis();
+  if((curr - lastUpdated) > 7200000 && bulb_state == 1){
+    kasaUtil.ScanDevicesAndAdd(1000, aliases, size);
+    lastUpdated = curr;
   }
 }
 
@@ -474,7 +481,8 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(PIN_5), handleButton5, RISING);
 
   //Initiate devices from pre defined IP addresses and aliases
-  addFromConfig(devices);
+  //addFromConfig(devices);
+  numberOfItems = kasaUtil.ScanDevicesAndAdd(1000, aliases, size);
 
   //Display set up
   display.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR);
@@ -504,6 +512,7 @@ void loop() {
     }
     button_loop();
     sleep_loop();
+    update_loop();
   }
 }
  
