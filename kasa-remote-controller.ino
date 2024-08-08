@@ -8,6 +8,7 @@
 #include "./structs/device.h"
 #include "AiEsp32RotaryEncoder.h"
 #include "AiEsp32RotaryEncoderNumberSelector.h"
+#include "./structs/menu_item.h"
 #include "Arduino.h"
 #include "bitmap.h"
 
@@ -72,6 +73,8 @@ const unsigned long debounceDelay = 500;
 int displayType = 0;
 
 //Menu Item selection variables
+MenuItem menuItems[size + 1];
+
 int numberOfItems;
 int selectedItem = 0;
 int previousItem;
@@ -95,6 +98,8 @@ volatile bool button5Pressed = false;
 volatile bool buttonPressed[] = {false, false, false, false, false};
 
 KASAUtil kasaUtil;
+
+
 
 void IRAM_ATTR handleButton1() {
   if(asleep){
@@ -154,6 +159,15 @@ void addFromConfig(UserDevice userdevices[]){
 } 
 
 void updateLastInteractedWith(){
+  for(int i = 0; i < size; i++){
+    if(kasaUtil.GetSmartPlugByIndex(i)->err_code == 1){
+      menuItems[i].icon = 2;
+    } else if (kasaUtil.GetSmartPlugByIndex(i)->state == 1){
+      menuItems[i].icon = 1;
+    } else {
+      menuItems[i].icon = 0;
+    }
+  }
   lastInteractedWith = millis();
 }
 
@@ -184,13 +198,17 @@ void quick_rotary_onButtonClick(){
 void menu_rotary_onButtonClick(){
   unsigned long currentTime = millis();
   if ((currentTime - lastDebounceTime) > debounceDelay) {
-    displayType = 1;
-    currentBulb = static_cast<KASASmartBulb*>(kasaUtil.GetSmartPlugByIndex(selectedItem));
-    individualBrightness = currentBulb->brightness;
-    numberSelectorQuick.setValue(individualBrightness);
-    lastChanged = millis();
-    // Update the last debounce time
-    lastDebounceTime = currentTime;
+    if(selectedItem == numberOfItems + 1){
+      ESP.restart();
+    } else {
+      displayType = 1;
+      currentBulb = static_cast<KASASmartBulb*>(kasaUtil.GetSmartPlugByIndex(selectedItem));
+      individualBrightness = currentBulb->brightness;
+      numberSelectorQuick.setValue(individualBrightness);
+      lastChanged = millis();
+      // Update the last debounce time
+      lastDebounceTime = currentTime;
+    }
   }
 }
 
@@ -289,38 +307,18 @@ void IRAM_ATTR readEncoderISRMenu(){
 void main_menu_display_loop(){
   previousItem = selectedItem - 1;
   if(previousItem < 0){
-    previousItem = numberOfItems - 1;
+    previousItem = numberOfItems;
   }
   nextItem = selectedItem + 1;
-  if(nextItem >= numberOfItems){
+  if(nextItem >= numberOfItems + 1){
     nextItem = 0;
   }
 
   display.clearDisplay();
-  if(kasaUtil.GetSmartPlugByIndex(previousItem)->err_code == 1){
-      display.drawBitmap(4, 2, bitmap_error_icon, 16, 16, 1);
-  } else if (kasaUtil.GetSmartPlugByIndex(previousItem)->state == 1){
-      display.drawBitmap(4, 2, bitmap_lit_icon, 16, 16, 1);
-  } else {
-      display.drawBitmap(4, 2, bitmap_icon, 16, 16, 1);
-  }
 
-
-  if(kasaUtil.GetSmartPlugByIndex(selectedItem)->err_code == 1){
-      display.drawBitmap(4, 24, bitmap_error_icon, 16, 16, 1);
-  } else if (kasaUtil.GetSmartPlugByIndex(selectedItem)->state == 1){
-      display.drawBitmap(4, 24, bitmap_lit_icon, 16, 16, 1);
-  } else {
-      display.drawBitmap(4, 24, bitmap_icon, 16, 16, 1);
-  }
-
-  if(kasaUtil.GetSmartPlugByIndex(nextItem)->err_code == 1){
-      display.drawBitmap(4, 46, bitmap_error_icon, 16, 16, 1);
-  } else if (kasaUtil.GetSmartPlugByIndex(nextItem)->state == 1){
-      display.drawBitmap(4, 46, bitmap_lit_icon, 16, 16, 1);
-  } else {
-      display.drawBitmap(4, 46, bitmap_icon, 16, 16, 1);
-  }
+  display.drawBitmap(4,2,bitmap_array[menuItems[previousItem].icon],16,16,1);
+  display.drawBitmap(4,24,bitmap_array[menuItems[selectedItem].icon],16,16,1);
+  display.drawBitmap(4,46,bitmap_array[menuItems[nextItem].icon],16,16,1);
 
   display.drawBitmap(0, 22, bitmap_item_sel_background, 128, 21, 1);
   display.drawBitmap(120, 0, bitmap_scrollbar_background, 8, 64, 1);
@@ -331,20 +329,20 @@ void main_menu_display_loop(){
   //Previous Item
   display.setFont(&FreeSans9pt7b);
   display.setCursor(26, 15);
-  display.print(kasaUtil.GetSmartPlugByIndex(previousItem)->alias);
+  display.print(menuItems[previousItem].name);
 
   //Current Item
   display.setFont(&FreeSansBold9pt7b);
   display.setCursor(26, 37);
-  display.print(kasaUtil.GetSmartPlugByIndex(selectedItem)->alias);
+  display.print(menuItems[selectedItem].name);
 
   //Next Item
   display.setFont(&FreeSans9pt7b);
   display.setCursor(26, 59);
-  display.print(kasaUtil.GetSmartPlugByIndex(nextItem)->alias);
+  display.print(menuItems[nextItem].name);
 
   //Scroll position box
-  display.fillRect(125, (64/numberOfItems) * selectedItem, 3, (64/numberOfItems), WHITE);
+  display.fillRect(125, (64/(numberOfItems + 1)) * selectedItem, 3, (64/(numberOfItems + 1)), WHITE);
 
   //Display
   display.display();
@@ -450,6 +448,13 @@ void setup() {
   //Initialize serial
   Serial.begin(115200);
 
+
+  display.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR);
+  display.setTextColor(WHITE);
+  display.setTextSize(1);
+  display.setFont();
+  display.display(); // Display the message
+  display.clearDisplay();
   //Connect to wifi with ssid and password from config.h
   connectToWifi();
 
@@ -464,7 +469,7 @@ void setup() {
   //Menu Rotary encoder set up
   rotaryEncoderMenu.begin();
   rotaryEncoderMenu.setup(readEncoderISRMenu);
-  rotaryEncoderMenu.setBoundaries(0,2,true);
+  rotaryEncoderMenu.setBoundaries(0,size,true);
   rotaryEncoderMenu.disableAcceleration();
 
   //Quick button pin setup
@@ -483,12 +488,12 @@ void setup() {
   //Initiate devices from pre defined IP addresses and aliases
   //addFromConfig(devices);
   numberOfItems = kasaUtil.ScanDevicesAndAdd(1000, aliases, size);
+  for(int i = 0; i < numberOfItems; i++){
+    menuItems[i] = {kasaUtil.GetSmartPlugByIndex(i)->alias, 0};
+  }
+  menuItems[numberOfItems] = {"Reset", 0};
 
   //Display set up
-  display.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR);
-  display.clearDisplay();
-  display.setTextColor(WHITE);
-  display.setTextSize(1);
 
   //Sleep check
   esp_sleep_enable_ext0_wakeup(SLEEP_WAKE_PIN, 0);
