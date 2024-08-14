@@ -20,14 +20,14 @@
 Adafruit_SSD1306 display(128,64, &Wire, -1);
 
 //Menu Rotary Setting
-#define MENU_ROTARY_ENCODER_DT_PIN      18
-#define MENU_ROTARY_ENCODER_CLK_PIN     16
-#define MENU_ROTARY_ENCODER_BUTTON_PIN  35
+#define MENU_ROTARY_ENCODER_DT_PIN      23
+#define MENU_ROTARY_ENCODER_CLK_PIN     17
+#define MENU_ROTARY_ENCODER_BUTTON_PIN  34
 
 //Quick Rotary Setting
-#define QUICK_ROTARY_ENCODER_DT_PIN     23
-#define QUICK_ROTARY_ENCODER_CLK_PIN    17
-#define QUICK_ROTARY_ENCODER_BUTTON_PIN 34
+#define QUICK_ROTARY_ENCODER_DT_PIN     18
+#define QUICK_ROTARY_ENCODER_CLK_PIN    16
+#define QUICK_ROTARY_ENCODER_BUTTON_PIN 35
 #define ROTARY_ENCODER_VCC_PIN          -1
 #define ROTARY_ENCODER_STEPS            4
 
@@ -89,17 +89,10 @@ bool asleep = false;
 unsigned long lastUpdated = 0;
 
 //Button states
-volatile bool button1Pressed = false;
-volatile bool button2Pressed = false;
-volatile bool button3Pressed = false;
-volatile bool button4Pressed = false;
-volatile bool button5Pressed = false;
-
 volatile bool buttonPressed[] = {false, false, false, false, false};
+volatile int x;
 
 KASAUtil kasaUtil;
-
-
 
 void IRAM_ATTR handleButton1() {
   if(asleep){
@@ -491,7 +484,7 @@ void setup() {
   for(int i = 0; i < numberOfItems; i++){
     menuItems[i] = {kasaUtil.GetSmartPlugByIndex(i)->alias, 0};
   }
-  menuItems[numberOfItems] = {"Reset", 0};
+  menuItems[numberOfItems] = {"Reset", 3};
 
   //Display set up
 
